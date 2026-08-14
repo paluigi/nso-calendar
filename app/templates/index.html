@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Economic Release Calendar</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <style>
+        :root {
+            --pico-font-size: 95%;
+        }
+        body {
+            background: #fafafa;
+        }
+        main.container {
+            max-width: 1100px;
+        }
+        .impact-high   { color: #c62828; font-weight: 600; }
+        .impact-medium { color: #ef6c00; }
+        .impact-low    { color: #757575; }
+
+        .release-card {
+            padding: 0.6rem 0.9rem;
+            margin-bottom: 0.4rem;
+            border-radius: 6px;
+            border-left: 3px solid #ccc;
+            background: white;
+            display: flex;
+            align-items: baseline;
+            gap: 0.8rem;
+        }
+        .card-ff   { border-left-color: #1565c0; background: #f0f4fa; }
+        .card-nso  { border-left-color: #2e7d32; }
+
+        .past-release { opacity: 0.55; }
+
+        .release-card .date-cell {
+            min-width: 120px;
+            font-size: 0.85em;
+            color: #555;
+            white-space: nowrap;
+        }
+        .release-card .source-cell {
+            min-width: 90px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .source-nso { color: #2e7d32; }
+        .source-ff  { color: #1565c0; }
+
+        .release-card .title-cell {
+            flex-grow: 1;
+        }
+        .release-card .title-cell a {
+            text-decoration: underline;
+        }
+
+        .ff-values {
+            display: inline-flex;
+            gap: 0.5rem;
+            font-family: monospace;
+            font-size: 0.82em;
+            background: #e3edf7;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+        }
+        .ff-actual { font-weight: 700; color: #0d47a1; }
+
+        .filter-bar {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .filter-bar .grid {
+            grid-template-columns: 1fr 1fr 1fr 2fr;
+            gap: 0.5rem;
+        }
+        .filter-bar select, .filter-bar input {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        .results-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.85em;
+            color: #666;
+        }
+        .export-btn {
+            font-size: 0.8em;
+        }
+
+        .impact-badge {
+            font-size: 0.7em;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .impact-badge.high   { background: #ffebee; color: #c62828; }
+        .impact-badge.medium { background: #fff3e0; color: #ef6c00; }
+        .impact-badge.low    { background: #f5f5f5; color: #757575; }
+
+        h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+        h1 .sub { font-size: 0.8rem; color: #777; font-weight: normal; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>📊 Economic Release Calendar <span class="sub">NSO + ForexFactory</span></h1>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <form id="filter-form"
+                  hx-get="/api/releases"
+                  hx-target="#release-cards"
+                  hx-trigger="change, submit, keyup delay:400ms from:find input[name='q']"
+                  hx-push-url="true">
+                <div class="grid">
+                    <select name="source" id="source-select">
+                        <option value="">All Sources</option>
+                        <optgroup label="NSOs">
+                            <option value="eurostat">Eurostat (EU)</option>
+                            <option value="istat">Istat (IT)</option>
+                            <option value="ine">INE (ES)</option>
+                            <option value="destatis">Destatis (DE)</option>
+                            <option value="insee">INSEE (FR)</option>
+                            <option value="cso">CSO (IE)</option>
+                        </optgroup>
+                        <option value="forexfactory">ForexFactory</option>
+                    </select>
+                    <input type="date" name="date_from" value="{{ default_date_from }}">
+                    <input type="date" name="date_to" value="{{ default_date_to }}">
+                    <input type="search" name="q" placeholder="Search title...">
+                </div>
+            </form>
+        </div>
+
+        <!-- Results -->
+        <div class="results-bar">
+            <span id="result-count"></span>
+            <a href="#" class="export-btn" id="export-link" style="display:none;">⬇ Export CSV</a>
+        </div>
+
+        <div id="release-cards" hx-get="/api/releases" hx-trigger="load" hx-push-url="true">
+            <!-- Cards loaded by HTMX on page load -->
+        </div>
+    </main>
+</body>
+</html>

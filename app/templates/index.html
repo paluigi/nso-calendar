@@ -6,69 +6,121 @@
     <title>Economic Release Calendar</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <script>
+        // Apply saved theme before first paint to avoid a flash
+        (function () {
+            var theme = localStorage.getItem('theme')
+                || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <style>
         :root {
-            --pico-font-size: 95%;
+            --pico-font-size: 105%;
+
+            --bg: #fafafa;
+            --card-bg: #ffffff;
+            --ff-card-bg: #f0f4fa;
+            --ff-values-bg: #e3edf7;
+            --text-muted: #666;
+            --text-soft: #555;
+            --text-faint: #888;
+            --border-neutral: #cccccc;
+            --source-nso: #2e7d32;
+            --source-ff: #1565c0;
+            --ff-actual: #0d47a1;
         }
+
+        [data-theme="dark"] {
+            --bg: #111418;
+            --card-bg: #1b1f24;
+            --ff-card-bg: #1a2230;
+            --ff-values-bg: #223046;
+            --text-muted: #9aa4af;
+            --text-soft: #aab2bb;
+            --text-faint: #8a929b;
+            --border-neutral: #3a4148;
+            --source-nso: #66bb6a;
+            --source-ff: #64a8f0;
+            --ff-actual: #90caf9;
+        }
+
         body {
-            background: #fafafa;
+            background: var(--bg);
         }
         main.container {
             max-width: 1100px;
         }
-        .impact-high   { color: #c62828; font-weight: 600; }
-        .impact-medium { color: #ef6c00; }
-        .impact-low    { color: #757575; }
 
         .release-card {
-            padding: 0.6rem 0.9rem;
-            margin-bottom: 0.4rem;
+            padding: 0.7rem 1rem;
+            margin-bottom: 0.45rem;
             border-radius: 6px;
-            border-left: 3px solid #ccc;
-            background: white;
+            border-left: 3px solid var(--border-neutral);
+            background: var(--card-bg);
             display: flex;
             align-items: baseline;
-            gap: 0.8rem;
+            gap: 1rem;
+            font-size: 1.02em;
         }
-        .card-ff   { border-left-color: #1565c0; background: #f0f4fa; }
-        .card-nso  { border-left-color: #2e7d32; }
+        .card-ff   { border-left-color: var(--source-ff); background: var(--ff-card-bg); }
+        .card-nso  { border-left-color: var(--source-nso); }
 
         .past-release { opacity: 0.55; }
 
         .release-card .date-cell {
-            min-width: 120px;
-            font-size: 0.85em;
-            color: #555;
+            min-width: 130px;
+            font-size: 0.95em;
+            color: var(--text-soft);
             white-space: nowrap;
         }
         .release-card .source-cell {
-            min-width: 90px;
-            font-size: 0.8em;
+            min-width: 100px;
+            font-size: 0.9em;
             font-weight: 600;
         }
-        .source-nso { color: #2e7d32; }
-        .source-ff  { color: #1565c0; }
+        .source-nso { color: var(--source-nso); }
+        .source-ff  { color: var(--source-ff); }
 
         .release-card .title-cell {
             flex-grow: 1;
-        }
-        .release-card .title-cell a {
-            text-decoration: underline;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            justify-content: space-between;
         }
 
         .ff-values {
-            display: inline-flex;
-            gap: 0.5rem;
-            font-family: monospace;
-            font-size: 0.82em;
-            background: #e3edf7;
-            padding: 0.1rem 0.4rem;
-            border-radius: 3px;
+            display: inline-grid;
+            grid-template-columns: repeat(3, minmax(5.5rem, auto));
+            gap: 0 0.9rem;
+            background: var(--ff-values-bg);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: auto;
         }
-        .ff-actual { font-weight: 700; color: #0d47a1; }
+        .ff-col {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .ff-label {
+            font-size: 0.68em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+        }
+        .ff-val {
+            font-family: monospace;
+            font-size: 0.95em;
+            white-space: nowrap;
+        }
+        .ff-actual { font-weight: 700; color: var(--ff-actual); }
 
         .filter-bar {
-            background: white;
+            background: var(--card-bg);
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
@@ -80,7 +132,7 @@
         }
         .filter-bar select, .filter-bar input {
             margin: 0;
-            font-size: 0.9em;
+            font-size: 0.95em;
         }
 
         .results-bar {
@@ -88,38 +140,46 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0.5rem;
-            font-size: 0.85em;
-            color: #666;
+            font-size: 0.95em;
+            color: var(--text-muted);
         }
         .export-btn {
-            font-size: 0.8em;
+            font-size: 0.85em;
         }
-
-        .impact-badge {
-            font-size: 0.7em;
-            padding: 0.1rem 0.35rem;
-            border-radius: 3px;
-            text-transform: uppercase;
-        }
-        .impact-badge.high   { background: #ffebee; color: #c62828; }
-        .impact-badge.medium { background: #fff3e0; color: #ef6c00; }
-        .impact-badge.low    { background: #f5f5f5; color: #757575; }
 
         h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
-        h1 .sub { font-size: 0.8rem; color: #777; font-weight: normal; }
+        h1 .sub { font-size: 0.8rem; color: var(--text-muted); font-weight: normal; }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        #theme-toggle {
+            width: 2.6rem;
+            height: 2.6rem;
+            padding: 0;
+            font-size: 1.1rem;
+            line-height: 1;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
     <main class="container">
-        <h1>📊 Economic Release Calendar <span class="sub">NSO + ForexFactory</span></h1>
+        <div class="header-row">
+            <h1>📊 Economic Release Calendar <span class="sub">NSO + ForexFactory</span></h1>
+            <button id="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+        </div>
 
         <!-- Filters -->
         <div class="filter-bar">
             <form id="filter-form"
                   hx-get="/api/releases"
                   hx-target="#release-cards"
-                  hx-trigger="change, submit, keyup delay:400ms from:find input[name='q']"
-                  hx-push-url="true">
+                  hx-trigger="change, submit, keyup delay:400ms from:find input[name='q']">
                 <div class="grid">
                     <select name="source" id="source-select">
                         <option value="">All Sources</option>
@@ -146,9 +206,28 @@
             <a href="#" class="export-btn" id="export-link" style="display:none;">⬇ Export CSV</a>
         </div>
 
-        <div id="release-cards" hx-get="/api/releases" hx-trigger="load" hx-push-url="true">
+        <div id="release-cards" hx-get="/api/releases" hx-trigger="load">
             <!-- Cards loaded by HTMX on page load -->
         </div>
     </main>
+
+    <script>
+        var themeToggle = document.getElementById('theme-toggle');
+
+        function updateToggleIcon() {
+            var theme = document.documentElement.getAttribute('data-theme');
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        themeToggle.addEventListener('click', function () {
+            var current = document.documentElement.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateToggleIcon();
+        });
+
+        updateToggleIcon();
+    </script>
 </body>
 </html>

@@ -165,6 +165,16 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+        footer a {
+            color: var(--source-ff);
+        }
     </style>
 </head>
 <body>
@@ -209,6 +219,10 @@
         <div id="release-cards" hx-get="/api/releases" hx-trigger="load">
             <!-- Cards loaded by HTMX on page load -->
         </div>
+
+        <footer>
+            <a href="https://github.com/paluigi/nso-calendar" target="_blank" rel="noopener">GitHub</a> · Economic Release Calendar
+        </footer>
     </main>
 
     <script>

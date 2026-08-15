@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_enabled: bool = True
 
+    # Optional HTTP(S) proxy for ForexFactory requests (datacenter IPs are
+    # often blocked). Format: http://user:pwd@ipaddr:port
+    ff_proxy_url: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_prefix="")
 
 

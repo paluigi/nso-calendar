@@ -4,11 +4,13 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
 
+from app.config import settings
 from app.models import FFReleaseRecord
 
 
@@ -35,6 +37,29 @@ class ForexFactoryCollector:
     BACKFILL_START = (2026, 6)    # June 2026
     LOOKBACK_MONTHS = 1
     LOOKAHEAD_MONTHS = 3
+
+    def __init__(self, proxy_url: str | None = None):
+        """proxy_url: optional HTTP(S) proxy (http://user:pwd@ipaddr:port).
+        Defaults to the FF_PROXY_URL setting. Used for all ForexFactory
+        requests (their site often blocks datacenter IPs)."""
+        self._proxy = (settings.ff_proxy_url if proxy_url is None else proxy_url).strip() or None
+        if self._proxy:
+            logging.info(f"ForexFactory requests routed via proxy {self._mask_credentials(self._proxy)}")
+
+    @staticmethod
+    def _mask_credentials(proxy_url: str) -> str:
+        """Strip user:password from a proxy URL for logging."""
+        parts = urlsplit(proxy_url)
+        if parts.username is None:
+            return proxy_url
+        host = parts.netloc.split("@", 1)[1]
+        return f"{parts.scheme}://{host}"
+
+    @property
+    def _proxies(self) -> dict[str, str] | None:
+        if not self._proxy:
+            return None
+        return {"http": self._proxy, "https": self._proxy}
 
     def collect_initial_backfill(self) -> list[FFReleaseRecord]:
         """One-time: scrape from June 2026 to current month."""
@@ -73,9 +98,12 @@ class ForexFactoryCollector:
         return all_records
 
     def _scrape_page(self, url: str, year: int) -> list[FFReleaseRecord]:
-        resp = requests.get(url, timeout=30, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
-        })
+        resp = requests.get(
+            url,
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"},
+            proxies=self._proxies,
+        )
         soup = BeautifulSoup(resp.text, "html.parser")
         records: list[FFReleaseRecord] = []
         current_date_str: str | None = None

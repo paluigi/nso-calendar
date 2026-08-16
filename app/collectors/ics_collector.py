@@ -21,11 +21,13 @@ class ICSCollector(BaseNSOCollector):
         feed_urls: list[str],
         default_tz: str = "UTC",
         default_hour: int = 9,
+        timeout: int = 30,
     ):
         self._code = code
         self._urls = feed_urls
         self._tz = ZoneInfo(default_tz)
         self._hour = default_hour
+        self._timeout = timeout
 
     def source_code(self) -> str:
         return self._code
@@ -34,9 +36,15 @@ class ICSCollector(BaseNSOCollector):
         records: list[NSOReleaseRecord] = []
         for url in self._urls:
             try:
-                resp = requests.get(url, timeout=30)
+                resp = requests.get(
+                    url,
+                    timeout=self._timeout,
+                    headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"},
+                )
                 resp.raise_for_status()
-                cal = icalendar.Calendar.from_ical(resp.text)
+                # ICS feeds are UTF-8; requests falls back to latin-1 when the
+                # Content-Type header carries no charset.
+                cal = icalendar.Calendar.from_ical(resp.content)
                 for event in cal.walk("VEVENT"):
                     dtstart = event.get("DTSTART")
                     if dtstart is None:
@@ -118,7 +126,7 @@ class IstatCollector(ICSCollector):
 
 
 class INECollector(ICSCollector):
-    """INE (Spain) — direct ICS feed."""
+    """INE (Spain) — direct ICS feed (large feed, slow server: needs a long timeout)."""
 
     FEED_URL = "https://www.ine.es/dynt3/Calendario/en/calendario.ics"
 
@@ -128,27 +136,25 @@ class INECollector(ICSCollector):
             feed_urls=[self.FEED_URL],
             default_tz="Europe/Madrid",
             default_hour=9,
+            timeout=90,
         )
 
 
 class EurostatCollector(ICSCollector):
     """
-    Eurostat — ICS feed URL is JS-generated on the subscription page.
-    Falls back to the release calendar HTML if the ICS URL is not available.
+    Eurostat — ICS feed behind the "Subscribe to iCalendar" page
+    (https://ec.europa.eu/eurostat/subscribe/ics.format). An empty theme
+    parameter returns all themes.
     """
 
-    # The actual ICS URL must be extracted from the Eurostat subscribe page.
-    # For now we use the known direct endpoint pattern. If this fails at runtime,
-    # the collector logs the error and returns empty (scheduler continues with other sources).
     FEED_URLS = [
-        # Eurostat ICS endpoint — this may need updating based on JS extraction
-        "https://ec.europa.eu/eurostat/subscribe/calendar.ics",
+        "https://ec.europa.eu/eurostat/o/calendars/eventsIcal?theme=",
     ]
 
     def __init__(self):
         super().__init__(
             code="eurostat",
             feed_urls=self.FEED_URLS,
-            default_tz="Europe/Brussels",
+            default_tz="Europe/Luxembourg",
             default_hour=11,
         )

@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 import logging
-import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -27,34 +26,40 @@ class CSOCollector(BaseNSOCollector):
 
     def collect(self) -> list[NSOReleaseRecord]:
         # Query releases from the last 30 days
-        from datetime import timedelta
         since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
         url = f"{self.API_BASE}/PxStat.Data.Cube_API.ReadCollection/{since}/en"
 
-        resp = requests.get(url, timeout=30, headers={"Accept": "application/json"})
+        resp = requests.get(url, timeout=60, headers={"Accept": "application/json"})
+        resp.raise_for_status()
         data = resp.json()
         items = data.get("link", {}).get("item", [])
 
         records: list[NSOReleaseRecord] = []
-        for item in items:
-            # Each item has: href (API link), extension/title info
-            title = item.get("title", "")
-            href = item.get("href", "")
+        seen: set[tuple[str, datetime]] = set()
 
-            if not title:
+        for item in items:
+            # Items are per-dimension: title is in `label`, release timestamp
+            # (ISO-8601, e.g. "2026-07-27T11:00:00Z") in `updated`.
+            title = (item.get("label") or "").strip()
+            updated = (item.get("updated") or "").strip()
+            href = item.get("href") or ""
+
+            if not title or not updated:
                 continue
 
-            # Extract date from the href or metadata
-            # PxStat href format: .../ReadDataset/CODE/JSON-stat/2.0/en
-            # The release date is typically in the item metadata
-            dt = datetime.now(timezone.utc)  # fallback
+            dt = datetime.fromisoformat(updated.replace("Z", "+00:00")).astimezone(timezone.utc)
+
+            key = (title, dt)
+            if key in seen:
+                continue
+            seen.add(key)
 
             records.append(
                 NSOReleaseRecord(
                     source_code="cso",
                     title=title,
                     release_dt=dt,
-                    url=href if href.startswith("http") else f"https://data.cso.ie/{href}" if href else None,
+                    url=href if href.startswith("http") else None,
                 )
             )
 

@@ -11,31 +11,33 @@
             {{ r.source_name }}
         </div>
         <div class="title-cell">
-            {% if r.impact %}
-            <span class="impact-badge {{ r.impact }}">{{ r.impact }}</span>
-            {% endif %}
-            {% if r.url and (not r.release_dt.tzinfo or r.release_dt < now) %}
-                <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>
-            {% else %}
-                {{ r.title }}
-            {% endif %}
+            {{ r.title }}
 
             {% if r.reference_period %}
-                <small style="color:#888;">({{ r.reference_period }})</small>
+                <small style="color:var(--text-faint);">({{ r.reference_period }})</small>
             {% endif %}
 
             {% if r.source_type == 'forexfactory' and (r.actual or r.forecast or r.previous) %}
             <span class="ff-values">
-                {% if r.actual %}<span class="ff-actual">A: {{ r.actual }}</span>{% endif %}
-                {% if r.forecast %}<span>F: {{ r.forecast }}</span>{% endif %}
-                {% if r.previous %}<span>P: {{ r.previous }}</span>{% endif %}
+                <span class="ff-col">
+                    <span class="ff-label">Actual</span>
+                    <span class="ff-val ff-actual">{{ r.actual or '–' }}</span>
+                </span>
+                <span class="ff-col">
+                    <span class="ff-label">Forecast</span>
+                    <span class="ff-val">{{ r.forecast or '–' }}</span>
+                </span>
+                <span class="ff-col">
+                    <span class="ff-label">Previous</span>
+                    <span class="ff-val">{{ r.previous or '–' }}</span>
+                </span>
             </span>
             {% endif %}
         </div>
     </div>
     {% endfor %}
 {% else %}
-    <p style="text-align:center; padding: 2rem; color: #999;">No releases found for the selected filters.</p>
+    <p style="text-align:center; padding: 2rem; color: var(--text-muted);">No releases found for the selected filters.</p>
 {% endif %}
 </div>
 
@@ -46,9 +48,11 @@
 
     var exportLink = document.getElementById('export-link');
     if (count > 0) {
-        var params = new URLSearchParams(new URL(window.location.href).search);
-        var exportUrl = '/api/releases/export?' + params.toString();
-        exportLink.href = exportUrl;
+        // Build export URL from the current filter form values (the page URL
+        // no longer carries them since hx-push-url was removed).
+        var form = document.getElementById('filter-form');
+        var params = new URLSearchParams(new FormData(form)).toString();
+        exportLink.href = '/api/releases/export' + (params ? '?' + params : '');
         exportLink.style.display = 'inline';
     } else {
         exportLink.style.display = 'none';

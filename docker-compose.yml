@@ -16,13 +16,16 @@ services:
       retries: 5
 
   app:
-    build: .
+    image: paluigi/nso-calendar:0.2.2
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://nso:${DB_PASSWORD:-nso_dev}@db:5432/nso_calendar
       SCHEDULER_ENABLED: "true"
+      # Optional HTTP(S) proxy for ForexFactory (datacenter IPs are often blocked).
+      # Format: http://user:pwd@ipaddr:port
+      FF_PROXY_URL: ${FF_PROXY_URL:-}
     ports:
       - "8000:8000"
     restart: unless-stopped
